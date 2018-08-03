@@ -9,11 +9,26 @@ from .publishers import PublisherManager
 
 class BigEye:
 
-    def __init__(self, env, role, params={}):
+    def __init__(self, env, role, configPath, testsPath, extraParameters={}):
+        """Initialises a big eye instance
+
+        :param env: environment either 'dev' or 'prop', if run locally choose dev
+        :type env: string
+        :param role: role assumed by this instance, choose between 'master' to run all tests, 'slave' to run a portion or debug or 'updateBoards'
+        :type role: string
+        :param configPath: relative path to config file formatted as required in the read me
+        :type configPath: string
+        :param testsPath: relative modular path to tests files
+        :type testsPath: string
+        :param extraParameters: [extraParamters useful to some of the roles, defaults to {}
+        :param extraParameters: dict, optional
+        """
+
         self.env = env
         self.role = role
-        self.params = params
-        self.config = Config(self.env + '_config.yaml', self.env, self.role)
+        self.testsPath = testsPath
+        self.params = extraParameters
+        self.config = Config(configPath, self.env, self.role)
         self.logger = LogHandler.createLogHandler(self.env)
         self.testManager = TestManager(self.config, self.logger)
         if self.role in ['slave', 'updater'] or self.env == 'dev':
@@ -30,10 +45,11 @@ class BigEye:
             self.updatePublishers()
 
     def dispatchWork(self, startIndex):
+
         if self.role != 'master':
             raise Exception(
                 'The orchestrator has been instanciated with another role than master')
-        tests = self.testManager.buildTests('./tests/**/*.yaml')
+        tests = self.testManager.buildTests(self.testsPath)
         iterations = 0
         maxIterations = self.config.getValue('runConfiguration', 'iterations')
         while startIndex < len(tests) and iterations <= maxIterations:
@@ -55,7 +71,7 @@ class BigEye:
 
     def runTests(self, filesNames):
         # For running locally start index is passed in function call
-        tests = self.testManager.buildTests('./tests/**/*.yaml', filesNames)
+        tests = self.testManager.buildTests(self.testsPath, filesNames)
         if len(tests) > 0:
             testsWithResults = self.fetcherManager.fetchResults(tests)
             self.testManager.computeResults(testsWithResults)
@@ -83,7 +99,7 @@ class BigEye:
             self.runTests(filesNames)
 
     def updatePublishers(self):
-        tests = self.testManager.buildTests('./tests/**/*.yaml')
+        tests = self.testManager.buildTests(self.testsPath)
         self.logger.info('Updating publishers')
         self.publisherManager.updatePublishers(tests)
 

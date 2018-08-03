@@ -10,7 +10,9 @@ class Config():
     """Holds parsing and access methods for configs files"""
 
     def __init__(self, relativePath, env='prod', role='slave'):
-        """Parses config located at relativePath and registers as attribute a config which handles like a dict"""
+        """
+        Parses config located at relativePath and registers as attribute a config which handles like a dict
+        """
         if '.yaml' not in relativePath:
             raise Exception(
                 'Provided path to config file is not an .yaml formated file')
