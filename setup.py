@@ -8,7 +8,7 @@ setup(name='bigeye',
       license='Apache',
       packages=['bigeye'],
       install_requires=[
-          'psycopg2',
+          'psycopg2-binary',
           'datadog',
           'ruamel.yaml',
           'boto3'

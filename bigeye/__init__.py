@@ -39,7 +39,7 @@ class BigEye:
         """Executes tasks based on the instance role"""
 
         if self.role == 'master':
-            self.dispatchWork(self.params['startIndex'])
+            self.dispatchWork(self.params.get('startIndex', 0))
         elif self.role == 'slave':
             self.runTests(self.params['filesNames'])
         elif self.role == 'updateBoards':
@@ -48,7 +48,7 @@ class BigEye:
     def dispatchWork(self, startIndex):
         """Task execution for master instance, dispatches work to slaves
 
-        :param startIndex: starting index, ie the number of tests already done by previous instance 
+        :param startIndex: starting index, ie the number of tests already done by previous instance
         :type startIndex: int
         :raises Exception: if instance role is not master
         """
@@ -77,7 +77,7 @@ class BigEye:
                 startIndex = newstartIndex
 
     def runTests(self, filesNames):
-        """Run tests for given filesNames, used by the slaves 
+        """Run tests for given filesNames, used by the slaves
 
         :param filesNames: name of files that need to be run
         :type filesNames: list of strings
