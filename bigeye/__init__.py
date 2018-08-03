@@ -8,9 +8,7 @@ from .publishers import PublisherManager
 
 
 class BigEye:
-
-    def __init__(self, env, role, configPath, testsPath, extraParameters={}):
-        """Initialises a big eye instance
+    """A big eye instance for good sight
 
         :param env: environment either 'dev' or 'prop', if run locally choose dev
         :type env: string
@@ -24,6 +22,7 @@ class BigEye:
         :param extraParameters: dict, optional
         """
 
+    def __init__(self, env, role, configPath, testsPath, extraParameters={}):
         self.env = env
         self.role = role
         self.testsPath = testsPath
@@ -37,6 +36,8 @@ class BigEye:
             self.fetcherManager = FetcherManager(self.config, self.logger)
 
     def executeResponsabilites(self):
+        """Executes tasks based on the instance role"""
+
         if self.role == 'master':
             self.dispatchWork(self.params['startIndex'])
         elif self.role == 'slave':
@@ -45,6 +46,12 @@ class BigEye:
             self.updatePublishers()
 
     def dispatchWork(self, startIndex):
+        """Task execution for master instance, dispatches work to slaves
+
+        :param startIndex: starting index, ie the number of tests already done by previous instance 
+        :type startIndex: int
+        :raises Exception: if instance role is not master
+        """
 
         if self.role != 'master':
             raise Exception(
@@ -70,6 +77,12 @@ class BigEye:
                 startIndex = newstartIndex
 
     def runTests(self, filesNames):
+        """Run tests for given filesNames, used by the slaves 
+
+        :param filesNames: name of files that need to be run
+        :type filesNames: list of strings
+        """
+
         # For running locally start index is passed in function call
         tests = self.testManager.buildTests(self.testsPath, filesNames)
         if len(tests) > 0:
@@ -78,6 +91,12 @@ class BigEye:
             self.publisherManager.publishResults(testsWithResults)
 
     def callMaster(self, startIndex):
+        """For prod environment, calls a master lambda function to take over dispatching work, for local dispatches work
+
+        :param startIndex: number of tests already dispatched for execution
+        :type startIndex: int
+        """
+
         event = {'role': 'master', 'env': self.env, 'startIndex': startIndex}
         if self.env == 'prod':
             lambdaClient = LambdaClient(self.config, self.logger, self.env)
@@ -87,6 +106,12 @@ class BigEye:
             self.dispatchWork(startIndex)
 
     def callSlave(self, filesNames):
+        """For prod environment, calls a slave lambda function wigh filenames as input, for dev executes those tests
+
+        :param filesNames: file names of tests that need to be run
+        :type filesNames: list of strings
+        """
+
         event = {'role': 'slave', 'env': self.env,
                  'filesNames': filesNames}
         if self.env == 'prod':
@@ -99,11 +124,16 @@ class BigEye:
             self.runTests(filesNames)
 
     def updatePublishers(self):
+        """Update the publishers by using the test info
+        """
         tests = self.testManager.buildTests(self.testsPath)
         self.logger.info('Updating publishers')
         self.publisherManager.updatePublishers(tests)
 
     def tearDown(self):
+        """Closes the fetchers and publishers connections
+        """
+
         if self.role == 'slave':
             self.fetcherManager.tearDown()
             self.publisherManager.tearDown()

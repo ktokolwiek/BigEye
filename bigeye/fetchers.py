@@ -3,7 +3,13 @@ import time
 
 
 class FetcherManager:
-    """Container for all fetchers"""
+    """Container for different fetchers
+
+    :param config: config instance holding credentials details for each fetcher
+    :type config: Config
+    :param logger: logger instance from logger module
+    :type logger: logger
+    """
 
     def __init__(self, config, logger):
         self.config = config
@@ -16,6 +22,15 @@ class FetcherManager:
                     config.getValue('Fetchers', fetcher), logger, fetcher))
 
     def extractFetcher(self,  fetcherName):
+        """Returns fetcher object with given name
+
+        :param fetcherName: name of fetcher as defined in the config
+        :type fetcherName: string
+        :raises Exception: if fetcherName does not correspond to any of the fetchers
+        :return: fetcher instance
+        :rtype: fetcher
+        """
+
         for fet in self.fetchers:
             if fet.fetcherName == fetcherName:
                 return fet
@@ -23,6 +38,14 @@ class FetcherManager:
             fetcherName))
 
     def fetchResults(self, tests):
+        """Fetches result for each fetcher in each test
+
+        :param tests: list of tests
+        :type tests: list
+        :return: list of tests with each fetcher dict (attribute of test) assigned a result, tests that failed are not returned
+        :rtype: list
+        """
+
         t1 = time.time()
         testsWithResults = []
         for test in tests:
@@ -58,14 +81,26 @@ class Fetcher:
     """Abstract class for interface like behaviour for fetchers"""
 
     def fetchResult(self, test):
+        """Fetches result for each fetcher in the test
+
+        :param test: test instance
+        :type test: Test
+        :raises NotImplementedError: if this method is not implemented in the given publisher class
+        """
+
         print('The fetcher instance does not have the fetchResult method configured')
         raise NotImplementedError
 
 
 class FetchError(Exception):
-    """Exception raised if a fetcher errors out during fetching a result"""
+    """Exception raised if a fetcher errors out during fetching a result
+
+    :param message: message to return when printing this error
+    :type message: string
+    """
 
     def __init__(self, message):
+
         self.message = message
 
     def __str__(self):
@@ -73,17 +108,28 @@ class FetchError(Exception):
 
 
 class PostgresDB(Fetcher):
-    """One instance per connection to a pg database"""
+    """Postgres sql client for fetching results in pg dbs
+
+    :param dbconfig: connection credentials from config
+    :type dbconfig: dict
+    :param logger: logger instance
+    :type logger: logger
+    :param fetcherName: name to give to fetcher, used by FetcherManager
+    :type fetcherName: string
+    """
 
     def __init__(self, dbconfig, logger, fetcherName):
-        """Gets credentials from passed config and opens a connection to db."""
+
         self.logger = logger
         self.credentials = dbconfig
         self.openConnection()
         self.fetcherName = fetcherName
 
     def openConnection(self):
-        """Opens connection to the db with the credentials in the config passed during construction, catches all exceptions that could occur during connection set up"""
+        """Opens connection to db, raise an exception if could not connect to db
+
+        """
+
         try:
             self.conn = psycopg2.connect(host=self.credentials['host'], database=self.credentials['database'],
                                          port=5432, user=self.credentials['user'], password=self.credentials['password'])
@@ -93,7 +139,17 @@ class PostgresDB(Fetcher):
             raise
 
     def fetchResults(self, details):
-        """Execute query and returns the value of the first row and first column"""
+        """fetches results from pg db using info from details
+
+        :param details: dictionnary that has a query key value pair
+        :type details: dict
+        :raises FetchError: if query returns zero rows
+        :raises FetchError: if the query has an sql error
+        :raises FetchError: if the db returns an internal error
+        :return: value returned by query
+        :rtype: int
+        """
+
         self.cur.execute(details['query'])
         try:
             result = self.cur.fetchall()[0][0]

@@ -7,12 +7,17 @@ from base64 import b64decode
 
 
 class Config():
-    """Holds parsing and access methods for configs files"""
+    """Parses config at given path completes prod config with encrypted environment variables
+
+    :param relativePath: relative path to the config yaml file
+    :type relativePath: string
+    :param env: environment 'prod' or 'dev', if run locally use dev, defaults to 'prod'
+    :param env: str, optional
+    :param role: role, similar as roles in BigEye class, defaults to 'slave'
+    :param role: str, optional
+    """
 
     def __init__(self, relativePath, env='prod', role='slave'):
-        """
-        Parses config located at relativePath and registers as attribute a config which handles like a dict
-        """
         if '.yaml' not in relativePath:
             raise Exception(
                 'Provided path to config file is not an .yaml formated file')
@@ -36,18 +41,29 @@ class Config():
                     'Key not in environment variables, {}'.format(err))
 
     def getPasswordsFromKMS(self, client, KMSKey):
+        """Gets encrypted passwords from envrionment variables and decrypts it
+
+        :param client: boto3 kms client
+        :type client: boto3 client
+        :param KMSKey: name of the environment variable
+        :type KMSKey: string
+        :return: plain text string of variable
+        :rtype: string
         """
-        Takes a boto3 KMS client and returns the decrypted string of the stored value
-        """
+
         plainBytes = client.decrypt(
             CiphertextBlob=b64decode(environ[KMSKey]))['Plaintext']
         plainStringValue = plainBytes.decode()
         return plainStringValue
 
     def getValue(self, *args):
+        """Returns value from config following sequence of keys given in args
+
+        :raises err: if the sequence of keys is not in the config
+        :return: value stored in the config
+        :rtype: string
         """
-        Returns value from the config, according to the sequence of keys given in args
-        """
+
         try:
             value = self.config
             for arg in args:
@@ -72,9 +88,12 @@ class CLIArgsParser():
             'role', help='specify the mode you wish to use', choices=['master', 'slave', 'updateBoards'])
 
     def parseArgs(self):
+        """Parses the args of the command line
+
+        :return: args
+        :rtype: namespace
         """
-        Returns the parsed CLI args
-        """
+
         args = self.parser.parse_args()
         return args
 
@@ -86,9 +105,14 @@ class LogHandler():
 
     @staticmethod
     def createLogHandler(env='prod'):
+        """Creates log handler, without handler is env is prod with handlers otherwise
+
+        :param env: runtime environment, put 'dev' if run locally, defaults to 'prod'
+        :param env: str, optional
+        :return: logger instance from logging module
+        :rtype: logger
         """
-        Returns a logger from logging module, with handlers if run locally, without if run on lambda
-        """
+
         logger = logging.getLogger('main')
         logger.setLevel(logging.INFO)
         # Checks if logger has not been initialised before to avoid adding excessive handlers which duplicate messages
