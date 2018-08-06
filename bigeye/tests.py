@@ -5,14 +5,29 @@ from time import time
 
 
 class TestManager():
-    """Class to apply methods on a list of tests"""
+    """Container for group actions on tests
+
+        :param config: Config instance
+        :type config: Config
+        :param logger: logger instance
+        :type logger: logger
+    """
 
     def __init__(self, config, logger):
         self.config = config
         self.logger = logger
 
     def findTestFiles(self, relativePath, filesNames=None):
-        """Finds relative filepath to execution file of given parametered path"""
+        """Explores the relative path recursively to find matching files
+
+        :param relativePath: relative path that files will be matched with
+        :type relativePath: string
+        :param filesNames: list of files names to restrict output, defaults to None
+        :param filesNames: list of strings, optional
+        :return: list of matched file names
+        :rtype: list of strings
+        """
+
         filePaths = glob(os.path.join(relativePath), recursive=True)
         filePaths.sort()
         if filesNames != None:
@@ -21,7 +36,14 @@ class TestManager():
         return filePaths
 
     def loadtestDictsFromFilePaths(self, testFilePaths):
-        """Parse given yaml files using ruamel modules and returns a list of dictionaries"""
+        """Parses yaml files from given filepaths
+
+        :param testFilePaths: file names to parse
+        :type testFilePaths: list of strings
+        :return: list of dict parsed from the yaml
+        :rtype: list of dicts
+        """
+
         testDicts = []
         yaml = YAML()
         for testFile in testFilePaths:
@@ -31,6 +53,14 @@ class TestManager():
         return testDicts
 
     def testsFromYamlDict(self, yamlDict):
+        """Build test from a yaml dict from a parsed file
+
+        :param yamlDict: dict of parsed yaml file
+        :type yamlDict: dict    
+        :return: list of tests built from the yaml dict
+        :rtype: list of tests
+        """
+
         tests = []
         # metadata common for all tests in file
         name, description, testType, team = yamlDict['name'], yamlDict[
@@ -58,7 +88,15 @@ class TestManager():
         return tests
 
     def buildTestsFromDicts(self, testDicts):
-        """Build list of tests from testDicts, handles missing arguments from yaml files"""
+        """Build tests from a list of test dicts obtained from parsing yaml files
+
+        :param testDicts: list of dicts parsed from the yaml files
+        :type testDicts: list of dicts
+        :raises err: raises KeyError if parsed yaml files do not have required fields to build tests
+        :return: list of tests
+        :rtype: list of tests
+        """
+
         tests = []
         for testDict in testDicts:
             try:
@@ -68,11 +106,27 @@ class TestManager():
         return tests
 
     def filterTests(self, tests, **criteria):
-        """Filters a list of tests based on given criteria"""
+        """Filters a list of tests to match criteria
+
+        :param tests: list of tests to filter
+        :type tests: list of tests
+        :return: list of filtered tests
+        :rtype: list of tests
+        """
+
         return [test for test in tests if test.isTest(**criteria)]
 
     def buildTests(self, relativePath, filesNames=None):
-        """Finds, loads, builds and returns a filtered list of cases if the all arg is false"""
+        """Finds matching files to relative path, parses them and build tests from those parsed dicts, optionnally filter with filesNames
+
+        :param relativePath: path to find test files
+        :type relativePath: string
+        :param filesNames: only load those files, defaults to None
+        :param filesNames: list of strings, optional
+        :return: list of built tests
+        :rtype: list
+        """
+
         start = time()
         filePaths = self.findTestFiles(relativePath, filesNames)
         testDicts = self.loadtestDictsFromFilePaths(filePaths)
@@ -82,12 +136,29 @@ class TestManager():
         return tests
 
     def computeResults(self, tests):
+        """Computes test result for given list of tests by using each fetcher's result
+
+        :param tests: list of tests for which to compute result
+        :type tests: list of tests
+        """
+
         for test in tests:
             test.computeResult()
 
     def subsetOfTests(self, tests, startIndex, maxsize):
         """Returns a subset of given test list, ideally os size maxsize but can be shorter
-         in order to make sure tests with the same name are together"""
+         in order to make sure tests with the same name are together
+
+        :param tests: list of tests to extract subset from
+        :type tests: list of tests
+        :param startIndex: index to start from
+        :type startIndex: int
+        :param maxsize: maximum length of subset
+        :type maxsize: int
+        :return: subset of tests
+        :rtype: list of tests
+        """
+
         # need a method to make sure tests with same names are published together for sync with datadog publisher
         # maxsize must be bigger than the max of number of test per test name
         if (startIndex+maxsize) >= len(tests) or tests[startIndex+maxsize-1].name != tests[startIndex+maxsize].name:
@@ -100,7 +171,14 @@ class TestManager():
         return subset, startIndex+len(subset)
 
     def testToYAMLs(self, tests, rootFolder='./testsNewBuild/'):
-        """Dumps one yaml file per test name in the given rootfolder"""
+        """Writes a batch of tests to file in the yaml format, grouping them by team and name
+
+        :param tests: list of tests to write to file
+        :type tests: list
+        :param rootFolder: destination folder, defaults to './testsNewBuild/'
+        :param rootFolder: str, optional
+        """
+
         # extract unique test names
         uniqueTestNames = set([c.name for c in tests])
         # group by test names to put them in same files
@@ -122,9 +200,27 @@ class TestManager():
 
 
 class QualityTest():
+    """Test object for quality test, ie one fetcher
+
+        :param name: name of test
+        :type name: string
+        :param description: description of test
+        :type description: string
+        :param typ: quality or consistency
+        :type typ: string
+        :param team: team responsible for this test
+        :type team: string
+        :param active: whether the test is considered active
+        :type active: bool
+        :param fetchers: list of dictionnaries containing fetcher name and details that the test require
+        :type fetchers: list
+        :param publishers: list of dicts containing publisher name and details that the test uses
+        :type publishers: list
+        :param tags: tags that will be attached to published metrics
+        :type tags: dict
+        """
 
     def __init__(self, name, description, typ, team, active, fetchers, publishers, tags):
-        """non self explanatory args: typ is the type of test(quality or consistency)"""
         self.name = name
         self.description = description
         self.type = typ
@@ -135,13 +231,20 @@ class QualityTest():
         self.tags = tags
 
     def isTest(self, **criteria):
-        """Takes a number of filters and return true if the case matches those criteria"""
+        """Takes a number of criteria to check against the test attributes
+
+        :return: true if the test checks out the criteria, false if different
+        :rtype: bool
+        """
+
         for name, value in criteria.items():
             if self.__dict__[name] != value:
                 return False
         return True
 
     def computeResult(self):
+        """Computes result for test
+        """
         self.result = self.fetchers[0]['result']
 
     def toDict(self):
@@ -175,10 +278,29 @@ class QualityTest():
 
 
 class ConsistencyTest(QualityTest):
-    """This class is for all consistency tests that require extra attributes due to a higher number of queries"""
+    """Test object for consistency tests, ie two fetchers per test
+
+        :param name: name of test
+        :type name: string
+        :param description: description of test
+        :type description: string
+        :param typ: quality or consistency
+        :type typ: string
+        :param team: team responsible for this test
+        :type team: string
+        :param active: whether the test is considered active
+        :type active: bool
+        :param fetchers: list of dictionnaries containing fetcher name and details that the test require
+        :type fetchers: list
+        :param publishers: list of dicts containing publisher name and details that the test uses
+        :type publishers: list
+        :param tags: tags that will be attached to published metrics
+        :type tags: dict
+        :param action: how to compute test result from fetchers result
+        :type action: string
+    """
 
     def __init__(self, name, description, typ, team, active, fetchers, publishers, tags, action):
-        """non self explanatory args: typ is the type of test(quality or consistency)"""
         super().__init__(name, description, typ, team, active, fetchers, publishers, tags)
         self.action = action
 
