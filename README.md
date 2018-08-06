@@ -152,3 +152,16 @@ publisher_name:
 ```
 from bigeye import BigEye
 
+
+# Runs the tests and output the result
+runner = BigEye('dev', 'master', 'config.yaml', './tests/**/*.yaml')
+runner.executeResponsabilites()
+runner.tearDown()
+
+# Updates the dashboards, necessary if tests have been added or removed
+updater = BigEye('dev', 'updateBoards', 'config.yaml', './tests/**/*.yaml')
+updater.executeResponsabilites()
+updater.tearDown()
+```
+
+
