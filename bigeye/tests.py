@@ -182,9 +182,11 @@ class ConsistencyTest(QualityTest):
         super().__init__(name, description, typ, team, active, fetchers, publishers, tags)
         self.action = action
 
-    def computeResult(self, result1, result2):
+    def computeResult(self):
         """Computes case result from the two queries result depending on the action defined in the case"""
         if self.action == 'difference':
-            self.result = result1 - result2
+            self.result = self.fetchers[0]['result'] - \
+                self.fetchers[0]['result']
         elif self.action == 'division':
-            self.result = result1 / result2
+            self.result = self.fetchers[0]['result'] / \
+                self.fetchers[0]['result']

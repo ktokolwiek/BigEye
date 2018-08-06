@@ -98,7 +98,6 @@ class Zipper:
     """
 
     def __init__(self, filesToInclude, pathToEnv, destinationPath=None, packagesToExclude=[], toBuffer=True):
-        self.zip = zipfile.ZipFile(destinationPath, 'w', zipfile.ZIP_DEFLATED)
         self.filesToInclude = filesToInclude
         self.pathToEnv = pathToEnv
         self.packagesToExclude = packagesToExclude
@@ -107,6 +106,9 @@ class Zipper:
         if toBuffer:
             self.buf = BytesIO()
             self.zip = zipfile.ZipFile(self.buf, 'w')
+        else:
+            self.zip = zipfile.ZipFile(
+                destinationPath, 'w', zipfile.ZIP_DEFLATED)
 
     def addFilesFromLookUpPaths(self):
         """
