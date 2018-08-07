@@ -3,7 +3,13 @@ import time
 
 
 class PublisherManager:
-    """Container for all fetchers"""
+    """Container for publishers
+
+        :param config: Config instance
+        :type config: Config
+        :param logger: Logger instance
+        :type logger: logger
+    """
 
     def __init__(self, config, logger):
         self.config = config
@@ -16,7 +22,15 @@ class PublisherManager:
                     config.getValue('Publishers',  publisher), logger, publisher))
 
     def extractPublisher(self, publisherName):
-        """Returns a publisher that has given type and name"""
+        """returns a publisher that has a matching name
+
+        :param publisherName: name of publisher to look for
+        :type publisherName: string
+        :raises Exception: if cannot find a matching publisher
+        :return: publisher
+        :rtype: Publisher
+        """
+
         for pub in self.publishers:
             if pub.Name == publisherName:
                 return pub
@@ -24,12 +38,25 @@ class PublisherManager:
             publisherName))
 
     def getTestsForPublisher(self, publisher, tests):
+        """Extracts tests that have given publisher
+
+        :param publisher: publisher
+        :type publisher: Publisher
+        :param tests: list of tests to filter
+        :type tests: list of tests
+        :return: filtered tests
+        :rtype: list of tests
         """
-        Returns a list of test that have given publisher
-        """
+
         return [test for test in tests if publisher.name in [p['name'] for p in test.publishers]]
 
     def publishResults(self, tests):
+        """Publishes the tests results
+
+        :param tests: list of tests to publish
+        :type tests: list of tests
+        """
+
         for p in self.publishers:
             testsForThisPublisher = self.getTestsForPublisher(p, tests)
             try:
@@ -38,6 +65,12 @@ class PublisherManager:
                 pass
 
     def updatePublishers(self, tests):
+        """updates the publishers of given tests
+
+        :param tests: list of tests
+        :type tests: list of tests
+        """
+
         for p in self.publishers:
             testsForThisPublisher = self.getTestsForPublisher(p, tests)
             self.logger.info(
@@ -45,6 +78,10 @@ class PublisherManager:
             p.update(testsForThisPublisher)
 
     def tearDown(self):
+        """calls the teardown methodsof each publisher
+
+        """
+
         for p in self.publishers:
             p.tearDown()
 
@@ -76,10 +113,17 @@ class PublishError(Exception):
 
 
 class DatadogPublisher(Publisher):
-    """Sends metric points to datadog by batch and updates timeboards"""
+    """Publisher for datadog metrics and dashboards
+
+        :param datadogConfig: dict containing apiKey, appKey and batchsize
+        :type datadogConfig: dict
+        :param logger: logger instance
+        :type logger: logger
+        :param publisherName: name to give this instance
+        :type publisherName: string
+        """
 
     def __init__(self, datadogConfig, logger, publisherName):
-        """Initialise the datadog api with given datadogConfig, logger and publisherName from the config file"""
         initialize(api_key=datadogConfig['apiKey'],
                    app_key=datadogConfig['appKey'])
         self.batchSize = int(datadogConfig['batchSize'])
@@ -92,7 +136,14 @@ class DatadogPublisher(Publisher):
     ########## Metrics reporting #################
     ##############################################
     def buildMessageForDetailedGraphs(self, test):
-        """Builds a datadog message from a case instance"""
+        """Builds dict for datadog api, use test name in metric name
+
+        :param test: test for which to build message
+        :type test: Test
+        :return: message to send to datadog api
+        :rtype: dict
+        """
+
         dashboardName = self.extractPublisherDetails(
             test)['dashboardName'].replace(' ', '_')
         metricName = "DataPolice." + dashboardName + "." + test.name
@@ -102,7 +153,13 @@ class DatadogPublisher(Publisher):
         return msg
 
     def buildMessageForSummaryGraphs(self, test):
-        """Sends multiple values with same metric name but different tags for top level graphs"""
+        """builds dict for datadog api, does not include test name in metric name
+
+        :param test: test for which to build message
+        :type test: test
+        :return: message for datadog api
+        :rtype: dict
+        """
         dashboardName = self.extractPublisherDetails(
             test)['dashboardName'].replace(' ', '_')
         metricName = "DataPolice." + dashboardName
@@ -114,12 +171,24 @@ class DatadogPublisher(Publisher):
         return msg
 
     def extractPublisherDetails(self, test):
+        """extract details for this publisher in the test
+
+        :param test: test
+        :type test: test
+        :return: details for this publisher
+        :rtype: dict
+        """
         for p in test.publishers:
             if p['name'] == self.name:
                 return p['details']
 
     def publishResults(self, tests):
-        """Takes a list of tests to send to datadog by batch"""
+        """publishes results to datadog api for given tests
+
+        :param tests: list of tests
+        :type tests: list of tests
+        """
+
         t1 = time.time()
         msgBuffer = []
         for i in range(len(tests)):
@@ -135,11 +204,21 @@ class DatadogPublisher(Publisher):
             len(tests), t2-t1))
 
     def sendBatch(self, msgBuffer):
-        """Sends list of messages to datadog metric service"""
+        """Send a batch of messages to datadog metric api
+
+        :param msgBuffer: list of message dictionnaries
+        :type msgBuffer: list
+        :return: dict response from datadog metric api
+        :rtype: dict
+        """
         return api.Metric.send(msgBuffer)
 
     def updateMetricsMetadata(self, tests):
-        """Updates metric with metadata such as its description"""
+        """update the metrics description from the tests description, pretty slow so not part of main process
+
+        :param tests: list of tests
+        :type tests: list of tests
+        """
         t1 = time.time()
         testsAlreadyUpdated = []
         for test in tests:
@@ -157,6 +236,12 @@ class DatadogPublisher(Publisher):
     ##############################################
 
     def update(self, tests):
+        """Updates the dashboards with given tests
+
+        :param tests: list of tests to publish to dashboards
+        :type tests: list of tests
+        """
+
         # Need to group test by board type and board name
         timeboardsNames = set([pub['details']['dashboardName']
                                for test in tests for pub in test.publishers
@@ -185,16 +270,25 @@ class DatadogPublisher(Publisher):
     ########## Timeboard utilities ###############
     ##############################################
 
-    def generateDetailedGraph(self, case, TBName):
-        """Generates timeseries line graphs for given case with a breakdown per desco"""
+    def generateDetailedGraph(self, test, TBName):
+        """generates dict of graph for datadog api for timeboards
+
+        :param test: test to create timeline for
+        :type test: test
+        :param TBName: name of timeboard
+        :type TBName: string
+        :return: dict of graph for datadog api
+        :rtype: dict
+        """
+
         graph = {
-            "title": case.name,
+            "title": test.name,
 
             "definition": {
                 "viz": "timeseries",
                 "requests": [
                     {
-                        "q": "avg:DataPolice." + TBName.replace(' ', '_') + "." + case.name + "{*} by {desco}"
+                        "q": "avg:DataPolice." + TBName.replace(' ', '_') + "." + test.name + "{*} by {desco}"
                     }
                 ],
             }
@@ -202,7 +296,14 @@ class DatadogPublisher(Publisher):
         return graph
 
     def generateTopList(self, TBName):
-        """Returns a dictionary of a summary graph listing top offenders by descending order"""
+        """Returns a dictionary of a summary graph listing top offenders by descending order
+
+        :param TBName: name of timeboard
+        :type TBName: string
+        :return: dict of top list for datadog api
+        :rtype: dict
+        """
+
         graph = {
             "title": "top offenders ",
 
@@ -218,7 +319,14 @@ class DatadogPublisher(Publisher):
         return graph
 
     def generateTopChange(self, TBName):
-        """Returns a dictionary of a change graph"""
+        """creates dict of top change graph for timeboard for datadog api
+
+        :param TBName: name of timeboard
+        :type TBName: string
+        :return: dict of top change graph
+        :rtype: dict
+        """
+
         graph = {
             "title": "change vs previous day ",
 
@@ -240,7 +348,16 @@ class DatadogPublisher(Publisher):
         return graph
 
     def generateDahsboardGraphs(self, tests, TBName):
-        """Generates the list of graphs for the timeboards"""
+        """generate top and detailed graphs for timeboard
+
+        :param tests: list of tests
+        :type tests: list
+        :param TBName: name of timeboard
+        :type TBName: string
+        :return: list of graph dicts for datadog api
+        :rtype: list of dicts
+        """
+
         graphs = [self.generateTopList(TBName), self.generateTopChange(TBName)]
         testsAlreadyLoaded = []
         for test in tests:
@@ -251,7 +368,14 @@ class DatadogPublisher(Publisher):
         return graphs
 
     def createTimeBoard(self, TBName, tests):
-        """Takes a title, description and a list of cases and creates a timeboard of timeseries graphs for the cases"""
+        """Creates a timeboard with given name and tests
+
+        :param TBName: name of timeboard to create
+        :type TBName: string
+        :param tests: list of tests
+        :type tests: list
+        """
+
         graphs = self.generateDahsboardGraphs(tests, TBName)
         resp = api.Timeboard.create(
             title=TBName, description='', graphs=graphs)
@@ -259,7 +383,16 @@ class DatadogPublisher(Publisher):
             self.logger.error(resp)
 
     def apiUpdateTB(self, boardID, title,  graphs):
-        """Takes the board ID, title, description and graphs and updates corresponding board"""
+        """Takes the board ID, title, description and graphs and updates corresponding board
+
+        :param boardID: id of the board to update
+        :type boardID: int
+        :param title: title of timeboard
+        :type title: string
+        :param graphs: graphs to include on this timeboard
+        :type graphs: list
+        """
+
         resp = api.Timeboard.update(
             boardID,
             title=title,
@@ -269,7 +402,14 @@ class DatadogPublisher(Publisher):
             self.logger.error('Could not update timeboard {}'.format(resp))
 
     def updateTimeBoard(self, TBName, tests):
-        """Updates the timeboard for the given team, typ with graphs built from the cases"""
+        """Updates the timeboard with given name, if it does not exist creates it
+
+        :param TBName: name of the timeboard
+        :type TBName: string
+        :param tests: list of tests
+        :type tests: list
+        """
+
         if len(tests) > 0:
             graphs = self.generateDahsboardGraphs(tests, TBName)
             try:
@@ -285,12 +425,25 @@ class DatadogPublisher(Publisher):
                     'Updated timeboard {0} '.format(TBName))
 
     def getAllTimeBoards(self):
-        """To get the ids of the board in order to be able to update them, as name is not enough"""
+        """Get the ids of the board in order to be able to update them, as name is not enough
+
+        :return: returns details of all the timeboards
+        :rtype: dict or list
+        """
+
         res = api.Timeboard.get_all()
         return res
 
     def getIdOfTimeboard(self, name):
-        """Get all tbs and loops over them till it finds the id required"""
+        """Get all timeboards and loops over them till it finds the id required
+
+        :param name: name of timeboard
+        :type name: string
+        :raises e: raises custome exception if timeboard does not exist
+        :return: returns id of timeboard
+        :rtype: int
+        """
+
         allTBs = self.getAllTimeBoards()['dashes']
         for tb in allTBs:
             if tb['title'] == name:
@@ -303,6 +456,12 @@ class DatadogPublisher(Publisher):
     ##################################################
 
     def imagesForSB(self):
+        """returns list of images dict for datadog screenboard api
+
+        :return: list of images dict
+        :rtype: list
+        """
+
         imgs = [{
             "type": "image",
 
@@ -316,7 +475,14 @@ class DatadogPublisher(Publisher):
         return imgs
 
     def generateTopWidget(self, SBName):
-        """Returns a dictionary of a summary widget listing top offenders by descending order"""
+        """Returns a dictionary of a summary widget listing top offenders by descending order
+
+        :param SBName: name of screenboard
+        :type SBName: string
+        :return: dict of top widget
+        :rtype: dict
+        """
+
         widget = {
             "type": "toplist",
             "title": True,
@@ -350,7 +516,14 @@ class DatadogPublisher(Publisher):
         return widget
 
     def generateChangeWidget(self, SBName):
-        """Returns a dictionary of a change graph"""
+        """returns a dict for top change widget
+
+        :param SBName: name of screenboard
+        :type SBName: string
+        :return: dict of top change widget
+        :rtype: dict
+        """
+
         widget = {
             "type": "change",
             "title": True,
@@ -390,7 +563,20 @@ class DatadogPublisher(Publisher):
         return widget
 
     def generateTimeseriesForSB(self, test, SBName, x, y):
-        """Generates timeseries line graphs for given test with a breakdown per desco"""
+        """Generates timeseries line graphs for given test with a breakdown per desco
+
+        :param test: test to generate timeseries for
+        :type test: test
+        :param SBName: name of screenboard
+        :type SBName: string
+        :param x: horizontal coordinate to place timeseries graph
+        :type x: int
+        :param y: vertical coordinate to place timeseries graph
+        :type y: int
+        :return: timeseries dict for datadog api
+        :rtype: dict
+        """
+
         timeSeries = {
             "type": "timeseries",
 
@@ -420,6 +606,16 @@ class DatadogPublisher(Publisher):
         return timeSeries
 
     def generateWidgetsForSB(self, tests, SBName):
+        """Generates widget for screenboard
+
+        :param tests: list of tests
+        :type tests: list
+        :param SBName: name of screenboard
+        :type SBName: string
+        :return: list of widgets
+        :rtype: list
+        """
+
         widgets = self.imagesForSB()
         widgets.append(self.generateTopWidget(SBName))
         widgets.append(self.generateChangeWidget(SBName))
@@ -436,6 +632,12 @@ class DatadogPublisher(Publisher):
         return widgets
 
     def generateTemplateVariablesForSB(self):
+        """generates templates varibales for screenboard
+
+        :return: template varibales dict
+        :rtype: dict
+        """
+
         template_variables = [{
             "name": "var",
             "prefix": "desco",
@@ -444,7 +646,14 @@ class DatadogPublisher(Publisher):
         return template_variables
 
     def createScreenboard(self, SBName, tests):
-        """Takes a title, description and a list of tests and creates a screenboard of timeseries graphs for the tests"""
+        """creates a screenboard with given name and tests
+
+        :param SBName: name of screenboard to create
+        :type SBName: string
+        :param tests: list of tests to include in screenboard
+        :type tests: list
+        """
+
         widgets = self.generateWidgetsForSB(tests, SBName)
         tv = self.generateTemplateVariablesForSB()
         resp = api.Screenboard.create(
@@ -453,7 +662,18 @@ class DatadogPublisher(Publisher):
             self.logger.error(resp)
 
     def apiUpdateSB(self, boardID, title,  widgets, tv):
-        """Takes the board ID, title, description and graphs and updates corresponding board"""
+        """Takes the board ID, title, description and graphs and updates corresponding board
+
+        :param boardID: id of screenboard to update
+        :type boardID: int
+        :param title: title of screenboard
+        :type title: string
+        :param widgets: list of widgets for screenboard
+        :type widgets: list
+        :param tv: template variables
+        :type tv: dict
+        """
+
         resp = api.Screenboard.update(
             boardID,
             board_title=title,
@@ -464,7 +684,14 @@ class DatadogPublisher(Publisher):
             self.logger.error('Could not update screenboard {}'.format(resp))
 
     def updateScreenboard(self, SBname, tests):
-        """Updates the screenboard of given name graphs built from the cases"""
+        """Updates the screenboard of given name with graphs built from the tests
+
+        :param SBname: name of screenboard to update
+        :type SBname: string
+        :param tests: list of tests
+        :type tests: list
+        """
+
         if len(tests) > 0:
             widgets = self.generateWidgetsForSB(tests, SBname)
             tv = self.generateTemplateVariablesForSB()
@@ -481,12 +708,25 @@ class DatadogPublisher(Publisher):
                     'Updated screenboard {0}'.format(SBname))
 
     def getAllScreenboards(self):
-        """To get the ids of the board in order to be able to update them, as name is not enough"""
+        """To get the ids of the board in order to be able to update them, as name is not enough
+
+        :return: response of screenboard api get all method
+        :rtype: dict or list
+        """
+
         res = api.Screenboard.get_all()
         return res
 
     def getIdOfScreenboard(self, name):
-        """Get all screenboards and returns id if a a name matches the parameter, otherwise raises an exception"""
+        """Get all screenboards and returns id if a a name matches the parameter, otherwise raises an exception
+
+        :param name: name of screenboard
+        :type name: string
+        :raises e: if no screenboard matches
+        :return: id of screenboard
+        :rtype: int
+        """
+
         allSBs = self.getAllScreenboards()['screenboards']
         for sb in allSBs:
             if sb['title'] == name:
@@ -495,4 +735,8 @@ class DatadogPublisher(Publisher):
         raise e
 
     def tearDown(self):
+        """Teardowns datadog publisher
+
+        """
+
         pass
