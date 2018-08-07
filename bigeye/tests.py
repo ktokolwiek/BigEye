@@ -116,7 +116,7 @@ class TestManager():
 
         return [test for test in tests if test.isTest(**criteria)]
 
-    def buildTests(self, relativePath, filesNames=None):
+    def buildTests(self, relativePath, filesNames=None, onlyActive=True):
         """Finds matching files to relative path, parses them and build tests from those parsed dicts, optionnally filter with filesNames
 
         :param relativePath: path to find test files
@@ -131,6 +131,8 @@ class TestManager():
         filePaths = self.findTestFiles(relativePath, filesNames)
         testDicts = self.loadtestDictsFromFilePaths(filePaths)
         tests = self.buildTestsFromDicts(testDicts)
+        if onlyActive:
+            tests = [test for test in tests if test.active == True]
         duration = time() - start
         self.logger.info('Built tests in {0:.2f} seconds'.format(duration))
         return tests
