@@ -85,7 +85,7 @@ class CLIArgsParser():
             description='Hunts down mischievous data', epilog='Hope the tool answers some of your monitoring needs ;)')
         # defaults to false
         self.parser.add_argument(
-            'role', help='specify the mode you wish to use', choices=['master', 'slave', 'updateBoards', 'updateLambda'])
+            'role', help='specify the mode you wish to use', choices=['master', 'slave', 'updateBoards', 'updateLambda', 'invokeMaster', 'invokeSlave'])
 
     def parseArgs(self):
         """Parses the args of the command line

@@ -72,7 +72,7 @@ class BigEye:
                     tests, startIndex, self.config.getValue('runConfiguration', 'batchSize'))
                 filesNames = [test.name+'.yaml' for test in testBatch]
                 self.logger.info(
-                    'Calling slave with files names {}'.format(filesNames))
+                    'Calling slave with files names {}'.format(set(filesNames)))
                 self.callSlave(filesNames)
                 startIndex = newstartIndex
 
