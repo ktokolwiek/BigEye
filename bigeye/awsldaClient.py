@@ -155,7 +155,7 @@ class Zipper:
         self.addExternalLibraries()
         # return the zip if mode is toBuffer
         if self.toBuffer:
-            self.buf.seek(0)
             self.zip.close()
+            self.buf.seek(0)
             return self.buf.read()
         self.zip.close()
