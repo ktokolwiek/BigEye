@@ -134,7 +134,8 @@ class TestManager():
         if onlyActive:
             tests = [test for test in tests if test.active == True]
         duration = time() - start
-        self.logger.info('Built tests in {0:.2f} seconds'.format(duration))
+        self.logger.info(
+            'Built {0} tests in {1:.2f} seconds'.format(len(tests), duration))
         return tests
 
     def computeResults(self, tests):
