@@ -2,7 +2,7 @@ from time import sleep
 from json import dumps
 from .config import Config, LogHandler, CLIArgsParser
 from .awsldaClient import LambdaClient, Zipper
-from .tests import TestManager
+from .tests import TestManager, QualityTest, ConsistencyTest
 from .fetchers import FetcherManager
 from .publishers import PublisherManager
 
