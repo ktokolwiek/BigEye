@@ -311,7 +311,7 @@ class ConsistencyTest(QualityTest):
         """Computes case result from the two queries result depending on the action defined in the case"""
         if self.action == 'difference':
             self.result = self.fetchers[0]['result'] - \
-                self.fetchers[0]['result']
+                self.fetchers[1]['result']
         elif self.action == 'division':
             self.result = self.fetchers[0]['result'] / \
-                self.fetchers[0]['result']
+                self.fetchers[1]['result']
