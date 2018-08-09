@@ -133,8 +133,8 @@ class Zipper:
             packageName = destinationPath.split('/')[0]
             if packageName not in self.packagesToExclude:
                 self.zip.write(packageToAdd, destinationPath)
-        print('Added the packages files from the virtual env path: {}'.format(
-            self.pathToEnv))
+        print('Added {0} packages files from the virtual env path: {1}'.format(len(glob(os.path.join(self.pathToEnv, '**/*'), recursive=True)),
+                                                                               self.pathToEnv))
 
     def addExternalLibraries(self):
         """
