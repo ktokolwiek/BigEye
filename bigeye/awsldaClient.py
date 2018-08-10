@@ -130,7 +130,7 @@ class Zipper:
         for packageToAdd in glob(os.path.join(self.pathToEnv, '**/*'), recursive=True):
             # removes excess subdirectories as required by aws
             destinationPath = os.path.join(
-                packageToAdd.split('site-packages')[1])
+                packageToAdd.split('site-packages/')[1])
             packageName = destinationPath.split('/')[0]
             if packageName not in self.packagesToExclude:
                 self.zip.write(packageToAdd, destinationPath)
