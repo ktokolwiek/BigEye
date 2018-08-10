@@ -119,7 +119,7 @@ class Zipper:
                       for filePath in glob(os.path.join(lookupPath), recursive=True)]
         for fileToAdd in filesToAdd:
             # set destination path to root of zip file by removing extra dot
-            self.zip.write(fileToAdd, fileToAdd[1:])
+            self.zip.write(fileToAdd, fileToAdd)
         print('Added {} files found from the look up paths list to the zip package'.format(
             len(filesToAdd)))
 
@@ -129,7 +129,8 @@ class Zipper:
         """
         for packageToAdd in glob(os.path.join(self.pathToEnv, '**/*'), recursive=True):
             # removes excess subdirectories as required by aws
-            destinationPath = os.path.join(*packageToAdd.split('/')[5:])
+            destinationPath = os.path.join(
+                packageToAdd.split('site-packages')[1])
             packageName = destinationPath.split('/')[0]
             if packageName not in self.packagesToExclude:
                 self.zip.write(packageToAdd, destinationPath)
