@@ -493,7 +493,7 @@ class DatadogPublisher(Publisher):
             "height": 20,
             "width": 50,
 
-            "y": 3,
+            "y": 1,
             "x": 1,
 
             "time": {
@@ -534,7 +534,7 @@ class DatadogPublisher(Publisher):
             "height": 20,
             "width": 52,
 
-            "y": 3,
+            "y": 1,
             "x": 55,
 
             "time": {
@@ -615,11 +615,11 @@ class DatadogPublisher(Publisher):
         :return: list of widgets
         :rtype: list
         """
-
-        widgets = self.imagesForSB()
+        # Removed images for faster load of page
+        widgets = []
         widgets.append(self.generateTopWidget(SBName))
         widgets.append(self.generateChangeWidget(SBName))
-        yStart, graphsPerRow, i = 30, 3, 0
+        yStart, graphsPerRow, i = 28, 3, 0
         testsWithWidget = []
         for test in tests:
             if test.name not in testsWithWidget:
